@@ -16,16 +16,14 @@
 package io.netty.example.echo;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.example.util.ServerUtil;
 import io.netty.handler.ssl.SslContext;
+
+import java.nio.channels.Selector;
 
 /**
  * Sends one message when a connection is open and echoes back any received
@@ -63,7 +61,12 @@ public final class EchoClient {
              });
 
             // Start the client.
-            ChannelFuture f = b.connect(HOST, PORT).sync();
+            ChannelFuture f = b.connect(HOST, PORT).addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    System.out.println("连接完成");
+                }
+            }).sync();
 
             // Wait until the connection is closed.
             f.channel().closeFuture().sync();

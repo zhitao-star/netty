@@ -49,6 +49,7 @@ public interface EventExecutor extends EventExecutorGroup {
     /**
      * Return a new {@link Promise}.
      */
+    //创建一个 Promise 对象
     <V> Promise<V> newPromise();
 
     /**

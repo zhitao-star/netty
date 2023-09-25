@@ -69,26 +69,44 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         }
     };
 
+    //字段的原子更新器
     private static final AtomicIntegerFieldUpdater<SingleThreadEventExecutor> STATE_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(SingleThreadEventExecutor.class, "state");
+
+
+    //字段的原子更新器
     private static final AtomicReferenceFieldUpdater<SingleThreadEventExecutor, ThreadProperties> PROPERTIES_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(
                     SingleThreadEventExecutor.class, ThreadProperties.class, "threadProperties");
 
+    //任务队列
     private final Queue<Runnable> taskQueue;
 
+    //线程
     private volatile Thread thread;
+    //线程属性
     @SuppressWarnings("unused")
     private volatile ThreadProperties threadProperties;
+    //执行器
     private final Executor executor;
+    //是否被中断
     private volatile boolean interrupted;
 
+    //优雅关闭
     private final CountDownLatch threadLock = new CountDownLatch(1);
+
+    //优雅关闭
     private final Set<Runnable> shutdownHooks = new LinkedHashSet<Runnable>();
+
+    //增加任务是否唤醒
     private final boolean addTaskWakesUp;
+    //最大等待执行任务数量
     private final int maxPendingTasks;
+
+    //拒绝策略
     private final RejectedExecutionHandler rejectedExecutionHandler;
 
+    //最后执行时间
     private long lastExecutionTime;
 
     @SuppressWarnings({ "FieldMayBeFinal", "unused" })
@@ -195,6 +213,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * Interrupt the current running {@link Thread}.
      */
     protected void interruptThread() {
+        //延迟中断
         Thread currentThread = thread;
         if (currentThread == null) {
             interrupted = true;
@@ -832,13 +851,17 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     private void execute(Runnable task, boolean immediate) {
+        // 获得当前是否在 EventLoop 的线程中
         boolean inEventLoop = inEventLoop();
+        //说明任务已经加进去了
         addTask(task);
         if (!inEventLoop) {
+            // 创建线程
             startThread();
             if (isShutdown()) {
                 boolean reject = false;
                 try {
+                    // 若已经关闭，移除任务，并进行拒绝
                     if (removeTask(task)) {
                         reject = true;
                     }
@@ -852,7 +875,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 }
             }
         }
-
+        // 唤醒线程
         if (!addTaskWakesUp && immediate) {
             wakeup(inEventLoop);
         }
@@ -902,12 +925,14 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             Thread thread = this.thread;
             if (thread == null) {
                 assert !inEventLoop();
+                // 提交空任务，促使 execute 方法执行
                 submit(NOOP_TASK).syncUninterruptibly();
                 thread = this.thread;
                 assert thread != null;
             }
-
+            // 创建 DefaultThreadProperties 对象
             threadProperties = new DefaultThreadProperties(thread);
+            // CAS 修改 threadProperties 属性
             if (!PROPERTIES_UPDATER.compareAndSet(this, null, threadProperties)) {
                 threadProperties = this.threadProperties;
             }
@@ -949,6 +974,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     private void startThread() {
         if (state == ST_NOT_STARTED) {
+            //cas
             if (STATE_UPDATER.compareAndSet(this, ST_NOT_STARTED, ST_STARTED)) {
                 boolean success = false;
                 try {
@@ -986,14 +1012,18 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         executor.execute(new Runnable() {
             @Override
             public void run() {
+                // 记录当前线程
                 thread = Thread.currentThread();
+                // 如果当前线程已经被标记打断，则进行打断操作
                 if (interrupted) {
                     thread.interrupt();
                 }
 
                 boolean success = false;
+                //更新最后执行的时间
                 updateLastExecutionTime();
                 try {
+                    // 执行任务
                     SingleThreadEventExecutor.this.run();
                     success = true;
                 } catch (Throwable t) {
@@ -1041,6 +1071,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                         confirmShutdown();
                     } finally {
                         try {
+                            // 清理，释放资源
                             cleanup();
                         } finally {
                             // Lets remove all FastThreadLocals for the Thread as we are about to terminate and notify

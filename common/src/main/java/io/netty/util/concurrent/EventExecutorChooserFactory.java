@@ -26,6 +26,7 @@ public interface EventExecutorChooserFactory {
     /**
      * Returns a new {@link EventExecutorChooser}.
      */
+    //创建一个 EventExecutorChooser 对象
     EventExecutorChooser newChooser(EventExecutor[] executors);
 
     /**

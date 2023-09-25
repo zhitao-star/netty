@@ -102,8 +102,12 @@ final class SelectedSelectionKeySet extends AbstractSet<SelectionKey> {
     }
 
     private void increaseCapacity() {
+        //扩容
+        //两倍扩容
         SelectionKey[] newKeys = new SelectionKey[keys.length << 1];
+        // 复制老数组到新数组
         System.arraycopy(keys, 0, newKeys, 0, size);
+        // 赋值给老数组
         keys = newKeys;
     }
 }

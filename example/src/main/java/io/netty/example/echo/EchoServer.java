@@ -42,6 +42,7 @@ public final class EchoServer {
 
         // Configure the server.
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
+        // NioEventLoopGroup 如果没有传递构造器参数的话 默认使用的是cpu个数*2
         EventLoopGroup workerGroup = new NioEventLoopGroup();
         final EchoServerHandler serverHandler = new EchoServerHandler();
         try {

@@ -16,11 +16,13 @@
 package io.netty.util.concurrent;
 
 import io.netty.util.internal.ObjectUtil;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
 public final class ThreadPerTaskExecutor implements Executor {
+    //线程工厂对象
     private final ThreadFactory threadFactory;
 
     public ThreadPerTaskExecutor(ThreadFactory threadFactory) {
@@ -28,7 +30,7 @@ public final class ThreadPerTaskExecutor implements Executor {
     }
 
     @Override
-    public void execute(Runnable command) {
+    public void execute(@NotNull Runnable command) {
         threadFactory.newThread(command).start();
     }
 }

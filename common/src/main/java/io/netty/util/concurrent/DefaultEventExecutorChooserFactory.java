@@ -32,6 +32,7 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
 
     @Override
     public EventExecutorChooser newChooser(EventExecutor[] executors) {
+        // 是否为 2 的幂次方
         if (isPowerOfTwo(executors.length)) {
             return new PowerOfTwoEventExecutorChooser(executors);
         } else {
@@ -40,6 +41,7 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
     }
 
     private static boolean isPowerOfTwo(int val) {
+        // 2 10 -2
         return (val & -val) == val;
     }
 
@@ -61,6 +63,7 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
         // Use a 'long' counter to avoid non-round-robin behaviour at the 32-bit overflow boundary.
         // The 64-bit long solves this by placing the overflow so far into the future, that no system
         // will encounter this in practice.
+        //自增序列
         private final AtomicLong idx = new AtomicLong();
         private final EventExecutor[] executors;
 

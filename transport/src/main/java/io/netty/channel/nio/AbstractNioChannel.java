@@ -239,19 +239,25 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             }
 
             try {
+                // 目前有正在连接远程地址的 ChannelPromise ，则直接抛出异常，禁止同时发起多个连接。
                 if (connectPromise != null) {
                     // Already a connect in process.
                     throw new ConnectionPendingException();
                 }
-
+                // 记录 Channel 是否激活
                 boolean wasActive = isActive();
+                // 执行连接远程地址
                 if (doConnect(remoteAddress, localAddress)) {
+                    //发送成功通知
                     fulfillConnectPromise(promise, wasActive);
                 } else {
+                    // 记录 connectPromise
                     connectPromise = promise;
+                    // 记录 requestedRemoteAddress
                     requestedRemoteAddress = remoteAddress;
 
                     // Schedule connect timeout.
+                    // 使用 EventLoop 发起定时任务，监听连接远程地址超时。若连接超时，则回调通知 connectPromise 超时异常。
                     int connectTimeoutMillis = config().getConnectTimeoutMillis();
                     if (connectTimeoutMillis > 0) {
                         connectTimeoutFuture = eventLoop().schedule(new Runnable() {
@@ -266,14 +272,16 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                             }
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
                     }
-
+                    // 添加监听器，监听连接远程地址取消。
                     promise.addListener(new ChannelFutureListener() {
                         @Override
                         public void operationComplete(ChannelFuture future) throws Exception {
                             if (future.isCancelled()) {
                                 if (connectTimeoutFuture != null) {
+                                    // 取消定时任务
                                     connectTimeoutFuture.cancel(false);
                                 }
+                                // 置空 connectPromise
                                 connectPromise = null;
                                 close(voidPromise());
                             }
@@ -281,6 +289,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     });
                 }
             } catch (Throwable t) {
+                // 回调通知 promise 发生异常
                 promise.tryFailure(annotateConnectException(t, remoteAddress));
                 closeIfClosed();
             }
@@ -326,21 +335,27 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         public final void finishConnect() {
             // Note this method is invoked by the event loop only if the connection attempt was
             // neither cancelled nor timed out.
-
+            // 判断是否在 EventLoop 的线程中。
             assert eventLoop().inEventLoop();
 
             try {
+                // 获得 Channel 是否激活
                 boolean wasActive = isActive();
+                // 执行完成连接
                 doFinishConnect();
+                // 通知 connectPromise 连接完成
                 fulfillConnectPromise(connectPromise, wasActive);
             } catch (Throwable t) {
+                // 通知 connectPromise 连接异常
                 fulfillConnectPromise(connectPromise, annotateConnectException(t, requestedRemoteAddress));
             } finally {
+                // 取消 connectTimeoutFuture 任务
                 // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
                 // See https://github.com/netty/netty/issues/1770
                 if (connectTimeoutFuture != null) {
                     connectTimeoutFuture.cancel(false);
                 }
+                // 置空 connectPromise
                 connectPromise = null;
             }
         }
@@ -408,7 +423,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         }
 
         readPending = true;
-
+        //添加为感兴趣的事件。也就说，服务端可以开始处理客户端的连接事件。
         final int interestOps = selectionKey.interestOps();
         if ((interestOps & readInterestOp) == 0) {
             selectionKey.interestOps(interestOps | readInterestOp);
